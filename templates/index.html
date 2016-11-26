@@ -34,7 +34,7 @@
         <div id="view">
             <ul id="items">
                 {{ range .Tils }}
-                <li>{{ .Title }} <a href="/delete" class="delete" id="delete-{{ .ID }}">Delete</a></li>
+                <li><span id="item-{{ .ID }}" data-editable>{{ .Title }}</span> <a href="/delete" class="delete pull-right" id="delete-{{ .ID }}">Delete</a></li>
                 {{ end }}
             </ul>
         </div>

@@ -91,6 +91,28 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	mux.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
+		type JsonTil struct {
+			ID string `json:"ID"`
+			Title string `json:"Title"`
+		}
+		var til JsonTil
+
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&til)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		_, err = db.Exec("UPDATE tils SET title = ? WHERE id = ?", til.Title, til.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
+
 	n := negroni.Classic()
 	n.Use(negroni.HandlerFunc(verifyDatabase))
 	n.UseHandler(mux)
