@@ -13,44 +13,61 @@ var til = {
             til.deleteItem(id);
         })
 
-        // $("ul#items").on("click", "li", function(event){
-        //     var id = $(this).attr("id").split('-')[1];
-        //     console.log("edit item with id: " + id);
-        //     til.editItem(id);
-        // })
-
         $('body').on('click', '[data-editable]', function(){
             til.editItem($(this));
         });
+
+        $('div').on('click', '#show-register', function(){
+            $('#register-form').removeClass('hidden');
+            $('#show-register').addClass('active');
+            $('#login-form').addClass('hidden');
+            $('#show-login').removeClass('active');
+            $('#show-register').blur();
+            $('#login-email').focus();
+        });
+
+        $('div').on('click', '#show-login', function(){
+            $('#register-form').addClass('hidden');
+            $('#show-register').removeClass('active');
+            $('#login-form').removeClass('hidden');
+            $('#show-login').addClass('active');
+            $('#show-login').blur();
+            $('#register-email').focus();
+        });
+
     },
 
     addItem: function() {
-        console.log("added item");
         $.ajax({
             url: "/create",
             method: "POST",
             data: $("#add-item-form").serialize(),
             success: function(rawData){
-                console.log("success function called");
                 var parsed = JSON.parse(rawData);
-                console.log("parsed " + parsed);
                 if (!parsed) {
                     return false;
                 }
 
                 // Clear the form
                 $('#title').val('');
+                $('#msg').remove();
 
                 // Add in the new items
+                var haveUser = true
                 parsed.forEach(function(result){
-                    $("ul#items").append("<li>" + result.Title + ' <a href="/delete" class="delete pull-right" id="delete-' +  result.ID + '">Delete</a></li>');
+                    if (result.ID == -1) {
+                        haveUser = false
+                    }
+                    $("ul#items").append('<li><strong>' + result.Date + '</strong> <span id="item-' + result.ID + '" data-editable>' + result.Title + '</span> <a href="/delete" class="delete pull-right" id="delete-' +  result.ID + '">Delete</a></li>');
                 });
+                if (!haveUser) {
+                    $("ul#items").prepend('<p class="text-warning" id="msg">You must be logged in for items to be saved.</p>');
+                }
             }
         });
     },
 
     deleteItem: function(id) {
-        console.log("deleting item with id: " + id);
         $.ajax({
             url: "/delete/" + id,
             method: "GET",
@@ -62,11 +79,8 @@ var til = {
     },
 
     editItem: function(item) {
-        console.log("editItem function called");
-
         var input = $('<input/>').val( item.text());
         var id = item.attr("id").split('-')[1];
-        console.log("edit item with id of: " + id);
         item.replaceWith(input);
 
         input.keydown(function(event){
@@ -79,7 +93,6 @@ var til = {
             var editedText = input.val();
             var editedItemSpan = $('<span id="item-' + id + '" data-editable />').text(editedText);
             input.replaceWith(editedItemSpan);
-            console.log("edited text: " + editedText);
 
             $.ajax({
                 url: "/edit",

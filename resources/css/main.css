@@ -1,0 +1,12 @@
+body {
+    margin: 5em;
+}
+
+/*#register-form {*/
+    /*display: none;*/
+/*}*/
+
+.message {
+    margin: 1em 0;
+    padding: 1em;
+}
