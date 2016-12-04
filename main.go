@@ -48,6 +48,16 @@ var db *sql.DB
 func initDB() {
 	if os.Getenv("ENV") != "production" {
 		db, _ = sql.Open("sqlite3", "til.db")
+
+		// Create tables
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )"); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return 
+		}
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )"); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	} else {
 		db, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	}
