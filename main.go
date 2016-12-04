@@ -6,6 +6,7 @@ import (
 
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 
 	"encoding/json"
 
@@ -17,6 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"fmt"
 	"time"
+	"os"
 )
 
 type Page struct {
@@ -42,6 +44,14 @@ type User struct {
 }
 
 var db *sql.DB
+
+func initDB() {
+	if os.Getenv("ENV") != "production" {
+		db, _ = sql.Open("sqlite3", "til.db")
+	} else {
+		db, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	}
+}
 
 func verifyDatabase(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if err := db.Ping(); err != nil {
@@ -77,7 +87,13 @@ func verifyUser(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	}
 	if email := getStringFromSession(r, "User"); email != "" {
 		var user User
-		err := db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+		var err error
+		if os.Getenv("ENV") != "production" {
+			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+		} else {
+			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+
+		}
 		if err == nil {
 			next(w, r)
 			return
@@ -111,7 +127,8 @@ func main() {
 		"templates/index.html",
 		"templates/login.html"))
 
-	db, _ = sql.Open("sqlite3", "til.db")
+	//db, _ = sql.Open("sqlite3", "til.db")
+	initDB()
 
 	mux := gmux.NewRouter()
 
@@ -126,11 +143,21 @@ func main() {
 		}
 		// Fetch user
 		var user User
-		err := db.QueryRow("SELECT id, email FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email)
+		var err error
+		if os.Getenv("ENV") != "production" {
+			err = db.QueryRow("SELECT id, email FROM users WHERE email = $1", email).Scan(&user.ID, &user.Email)
+		} else {
+			err = db.QueryRow("SELECT id, email FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email)
+		}
 
 		// Fetch TILs for user
 		if err == nil {
-			rows, _ := db.Query("SELECT id, title, date FROM tils WHERE user_id = ?", user.ID)
+			var rows sql.Rows
+			if os.Getenv("ENV") != "production" {
+				rows, _ = db.Query("SELECT id, title, date FROM tils WHERE user_id = $1", user.ID)
+			} else {
+				rows, _ = db.Query("SELECT id, title, date FROM tils WHERE user_id = ?", user.ID)
+			}
 			for rows.Next() {
 				var t Til
 				rows.Scan(&t.ID, &t.Title, &t.Date)
@@ -180,7 +207,12 @@ func main() {
 			user := NewUser(r.FormValue("email"), r.FormValue("password"))
 
 			// Check if user already exists
-			err := db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+			var err error
+			if os.Getenv("ENV") != "production" {
+				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+			} else {
+				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+			}
 			// If no error, user exists: don't add
 			if err == nil {
 				page.Error = "User already exists"
@@ -188,7 +220,14 @@ func main() {
 			}
 
 			if validationPasses {
-				if _, err := db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password); err != nil {
+				var err error
+				if os.Getenv("ENV") != "production" {
+					_, err = db.Exec("INSERT INTO users (id, email, password) values ($1, $2, $3)", nil, user.Email, user.Password)
+				} else {
+					_, err = db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password)
+				}
+				//if _, err := db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password); err != nil {
+				if err != nil {
 					page.Error = err.Error()
 				} else {
 					// Put user into session
@@ -199,8 +238,12 @@ func main() {
 			}
 
 		} else if r.FormValue("login") != "" {
-			fmt.Println("Logging in")
-			err := db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+			var err error
+			if os.Getenv("ENV") != "production" {
+				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+			} else {
+				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
+			}
 			if err != nil {
 				page.Error = "Email/password combination incorrect"
 			} else {
@@ -233,7 +276,12 @@ func main() {
 		// Get user
 		var user User
 		email := getStringFromSession(r, "User")
-		err := db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Password)
+		var err error
+		if os.Getenv("ENV") != "production" {
+			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", email).Scan(&user.ID, &user.Email, &user.Password)
+		} else {
+			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Password)
+		}
 
 		now := time.Now()
 		formattedDate := formatDate(now)
@@ -242,9 +290,13 @@ func main() {
 		// Only insert TIL if we have a user
 		if err == nil {
 			title := r.FormValue("title")
-
-
-			row, err := db.Exec("INSERT INTO tils (id, title, user_id, date) values (?, ?, ?, ?)", nil, title, user.ID, now)
+			var err error
+			var row sql.Result
+			if os.Getenv("ENV") != "production" {
+				row, err = db.Exec("INSERT INTO tils (id, title, user_id, date) values ($1, $2, $3, ?$4)", nil, title, user.ID, now)
+			} else {
+				row, err = db.Exec("INSERT INTO tils (id, title, user_id, date) values (?, ?, ?, ?)", nil, title, user.ID, now)
+			}
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -271,7 +323,11 @@ func main() {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		_, err = db.Exec("DELETE FROM tils WHERE id = ?", id)
+		if os.Getenv("ENV") != "production" {
+			_, err = db.Exec("DELETE FROM tils WHERE id = $1", id)
+		} else {
+			_, err = db.Exec("DELETE FROM tils WHERE id = ?", id)
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -292,7 +348,11 @@ func main() {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		_, err = db.Exec("UPDATE tils SET title = ? WHERE id = ?", til.Title, til.ID)
+		if os.Getenv("ENV") != "production" {
+			_, err = db.Exec("UPDATE tils SET title = $1 WHERE id = $2", til.Title, til.ID)
+		} else {
+			_, err = db.Exec("UPDATE tils SET title = ? WHERE id = ?", til.Title, til.ID)
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -306,5 +366,10 @@ func main() {
 	n.Use(negroni.HandlerFunc(verifyDatabase))
 	n.Use(negroni.HandlerFunc(verifyUser))
 	n.UseHandler(mux)
-	n.Run(":8080")
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	n.Run(":" + port)
 }
