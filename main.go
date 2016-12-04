@@ -16,7 +16,6 @@ import (
 	gmux "github.com/gorilla/mux"
 	"strconv"
 	"golang.org/x/crypto/bcrypt"
-	"fmt"
 	"time"
 	"os"
 )
