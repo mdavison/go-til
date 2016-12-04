@@ -227,7 +227,7 @@ func main() {
 			if validationPasses {
 				var err error
 				if os.Getenv("ENV") != "production" {
-					_, err = db.Exec("INSERT INTO users (id, email, password) values ($1, $2, $3)", nil, user.Email, user.Password)
+					_, err = db.Exec("INSERT INTO users (email, password) values ($1, $2, $3)", user.Email, user.Password)
 				} else {
 					_, err = db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password)
 				}
@@ -297,7 +297,7 @@ func main() {
 			title := r.FormValue("title")
 			var results []Til
 			if os.Getenv("ENV") != "production" {
-				row, err := db.Exec("INSERT INTO tils (id, title, user_id, date) values ($1, $2, $3, ?$4)", nil, title, user.ID, now)
+				row, err := db.Exec("INSERT INTO tils (title, user_id, date) values ($1, $2, $3, ?$4)", title, user.ID, now)
 				id, _ := row.LastInsertId()
 				results = []Til{
 					Til{ID: int(id), Title: title, Date: formattedDate},
