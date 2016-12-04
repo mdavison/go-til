@@ -152,17 +152,22 @@ func main() {
 
 		// Fetch TILs for user
 		if err == nil {
-			var rows sql.Rows
 			if os.Getenv("ENV") != "production" {
-				rows, _ = db.Query("SELECT id, title, date FROM tils WHERE user_id = $1", user.ID)
+				rows, _ := db.Query("SELECT id, title, date FROM tils WHERE user_id = $1", user.ID)
+				for rows.Next() {
+					var t Til
+					rows.Scan(&t.ID, &t.Title, &t.Date)
+					t.formatDate()
+					p.Tils = append(p.Tils, t)
+				}
 			} else {
-				rows, _ = db.Query("SELECT id, title, date FROM tils WHERE user_id = ?", user.ID)
-			}
-			for rows.Next() {
-				var t Til
-				rows.Scan(&t.ID, &t.Title, &t.Date)
-				t.formatDate()
-				p.Tils = append(p.Tils, t)
+				rows, _ := db.Query("SELECT id, title, date FROM tils WHERE user_id = ?", user.ID)
+				for rows.Next() {
+					var t Til
+					rows.Scan(&t.ID, &t.Title, &t.Date)
+					t.formatDate()
+					p.Tils = append(p.Tils, t)
+				}
 			}
 		}
 
@@ -290,23 +295,28 @@ func main() {
 		// Only insert TIL if we have a user
 		if err == nil {
 			title := r.FormValue("title")
-			var err error
-			var row sql.Result
+			var results []Til
 			if os.Getenv("ENV") != "production" {
-				row, err = db.Exec("INSERT INTO tils (id, title, user_id, date) values ($1, $2, $3, ?$4)", nil, title, user.ID, now)
+				row, err := db.Exec("INSERT INTO tils (id, title, user_id, date) values ($1, $2, $3, ?$4)", nil, title, user.ID, now)
+				id, _ := row.LastInsertId()
+				results = []Til{
+					Til{ID: int(id), Title: title, Date: formattedDate},
+				}
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 			} else {
-				row, err = db.Exec("INSERT INTO tils (id, title, user_id, date) values (?, ?, ?, ?)", nil, title, user.ID, now)
-			}
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				row, err := db.Exec("INSERT INTO tils (id, title, user_id, date) values (?, ?, ?, ?)", nil, title, user.ID, now)
+				id, _ := row.LastInsertId()
+				results = []Til{
+					Til{ID: int(id), Title: title, Date: formattedDate},
+				}
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 			}
 
-			id, _ := row.LastInsertId()
-			results := []Til{
-				Til{ID: int(id), Title: title, Date: formattedDate},
-			}
-
-			if err = encoder.Encode(results); err != nil {
+			if err := encoder.Encode(results); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		} else {
