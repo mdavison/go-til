@@ -226,6 +226,8 @@ func main() {
 			if err == nil {
 				page.Error = "User already exists"
 				validationPasses = false
+			} else {
+				page.Error = err.Error()
 			}
 
 			if validationPasses {
@@ -256,8 +258,6 @@ func main() {
 			if err != nil {
 				page.Error = "Email/password combination incorrect"
 			} else {
-				fmt.Println(string(user.Password))
-
 				if err = bcrypt.CompareHashAndPassword(user.Password, []byte(r.FormValue("password"))); err != nil {
 					page.Error = "Email/password combination incorrect"
 				} else {
