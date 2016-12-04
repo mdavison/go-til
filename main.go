@@ -225,8 +225,6 @@ func main() {
 			if err == nil {
 				page.Error = "User already exists"
 				validationPasses = false
-			} else {
-				page.Error = err.Error()
 			}
 
 			if validationPasses {
@@ -238,7 +236,7 @@ func main() {
 				}
 				//if _, err := db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password); err != nil {
 				if err != nil {
-					page.Error = err.Error()
+					page.Error = "tried to insert: " + err.Error()
 				} else {
 					// Put user into session
 					sessions.GetSession(r).Set("User", user.Email)
