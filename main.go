@@ -18,6 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"time"
 	"os"
+	"log"
 )
 
 type Page struct {
@@ -49,8 +50,18 @@ func initDB() {
 		db, _ = sql.Open("sqlite3", "til.db")
 
 		// Create tables
-		db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )")
-		db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )")
+		//db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )")
+		//db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )")
+
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )"); err != nil {
+			log.Fatal(err.Error())
+			return
+		}
+
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )"); err != nil {
+			log.Fatal(err.Error())
+			return
+		}
 	} else {
 		db, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	}
