@@ -53,13 +53,13 @@ func initDB() {
 		//db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )")
 		//db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )")
 
-		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )"); err != nil {
-			log.Fatal(err.Error())
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id serial NOT NULL PRIMARY KEY, email text NOT NULL, password text NOT NULL )"); err != nil {
+			log.Fatal("Error creating table users: " + err.Error())
 			return
 		}
 
-		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )"); err != nil {
-			log.Fatal(err.Error())
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS tils (id serial NOT NULL PRIMARY KEY, title text NOT NULL, user_id integer NOT NULL, date text NOT NULL )"); err != nil {
+			log.Fatal("Error creating table tils: " + err.Error())
 			return
 		}
 	} else {
