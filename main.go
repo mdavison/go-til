@@ -46,15 +46,8 @@ type User struct {
 var db *sql.DB
 
 func initDB() {
-	if os.Getenv("ENV") != "production" {
-		db, _ = sql.Open("sqlite3", "til.db")
-	} else {
+	if os.Getenv("ENV") == "production" {
 		db, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
-
-		// Create tables
-		//db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )")
-		//db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )")
-
 
 		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id serial NOT NULL PRIMARY KEY, email text NOT NULL, password text NOT NULL )"); err != nil {
 			log.Fatal("Error creating table users: " + err.Error())
@@ -65,6 +58,8 @@ func initDB() {
 			log.Fatal("Error creating table tils: " + err.Error())
 			return
 		}
+	} else {
+		db, _ = sql.Open("sqlite3", "til.db")
 	}
 }
 
@@ -103,7 +98,7 @@ func verifyUser(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	if email := getStringFromSession(r, "User"); email != "" {
 		var user User
 		var err error
-		if os.Getenv("ENV") != "production" {
+		if os.Getenv("ENV") == "production" {
 			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
 		} else {
 			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
@@ -159,7 +154,7 @@ func main() {
 		// Fetch user
 		var user User
 		var err error
-		if os.Getenv("ENV") != "production" {
+		if os.Getenv("ENV") == "production" {
 			err = db.QueryRow("SELECT id, email FROM users WHERE email = $1", email).Scan(&user.ID, &user.Email)
 		} else {
 			err = db.QueryRow("SELECT id, email FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email)
@@ -167,7 +162,7 @@ func main() {
 
 		// Fetch TILs for user
 		if err == nil {
-			if os.Getenv("ENV") != "production" {
+			if os.Getenv("ENV") == "production" {
 				rows, _ := db.Query("SELECT id, title, date FROM tils WHERE user_id = $1", user.ID)
 				for rows.Next() {
 					var t Til
@@ -228,7 +223,7 @@ func main() {
 
 			// Check if user already exists
 			var err error
-			if os.Getenv("ENV") != "production" {
+			if os.Getenv("ENV") == "production" {
 				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
 			} else {
 				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
@@ -241,7 +236,7 @@ func main() {
 
 			if validationPasses {
 				var err error
-				if os.Getenv("ENV") != "production" {
+				if os.Getenv("ENV") == "production" {
 					_, err = db.Exec("INSERT INTO users (email, password) VALUES($1, $2)", user.Email, user.Password)
 				} else {
 					_, err = db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password)
@@ -259,7 +254,7 @@ func main() {
 
 		} else if r.FormValue("login") != "" {
 			var err error
-			if os.Getenv("ENV") != "production" {
+			if os.Getenv("ENV") == "production" {
 				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
 			} else {
 				err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", r.FormValue("email")).Scan(&user.ID, &user.Email, &user.Password)
@@ -295,7 +290,7 @@ func main() {
 		var user User
 		email := getStringFromSession(r, "User")
 		var err error
-		if os.Getenv("ENV") != "production" {
+		if os.Getenv("ENV") == "production" {
 			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = $1", email).Scan(&user.ID, &user.Email, &user.Password)
 		} else {
 			err = db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Password)
@@ -309,7 +304,7 @@ func main() {
 		if err == nil {
 			title := r.FormValue("title")
 			var results []Til
-			if os.Getenv("ENV") != "production" {
+			if os.Getenv("ENV") == "production" {
 				row, err := db.Exec("INSERT INTO tils (title, user_id, date) values ($1, $2, $3)", title, user.ID, now)
 				id, _ := row.LastInsertId()
 				results = []Til{
@@ -346,7 +341,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		if os.Getenv("ENV") != "production" {
+		if os.Getenv("ENV") == "production" {
 			_, err = db.Exec("DELETE FROM tils WHERE id = $1", id)
 		} else {
 			_, err = db.Exec("DELETE FROM tils WHERE id = ?", id)
@@ -371,7 +366,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if os.Getenv("ENV") != "production" {
+		if os.Getenv("ENV") == "production" {
 			_, err = db.Exec("UPDATE tils SET title = $1 WHERE id = $2", til.Title, til.ID)
 		} else {
 			_, err = db.Exec("UPDATE tils SET title = ? WHERE id = ?", til.Title, til.ID)
