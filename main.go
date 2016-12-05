@@ -48,10 +48,13 @@ var db *sql.DB
 func initDB() {
 	if os.Getenv("ENV") != "production" {
 		db, _ = sql.Open("sqlite3", "til.db")
+	} else {
+		db, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 
 		// Create tables
 		//db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )")
 		//db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )")
+
 
 		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id serial NOT NULL PRIMARY KEY, email text NOT NULL, password text NOT NULL )"); err != nil {
 			log.Fatal("Error creating table users: " + err.Error())
@@ -62,8 +65,6 @@ func initDB() {
 			log.Fatal("Error creating table tils: " + err.Error())
 			return
 		}
-	} else {
-		db, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	}
 }
 
