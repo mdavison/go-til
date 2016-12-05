@@ -53,12 +53,12 @@ func initDB() {
 		//db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )")
 		//db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )")
 
-		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )"); err != nil {
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )"); err != nil {
 			log.Fatal(err.Error())
 			return
 		}
 
-		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS users (id integer, email varchar(40), password varchar(40), PRIMARY KEY(id) )"); err != nil {
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS tils (id integer, title varchar(255), user_id integer, date varchar(40), PRIMARY KEY(id) )"); err != nil {
 			log.Fatal(err.Error())
 			return
 		}
@@ -241,13 +241,13 @@ func main() {
 			if validationPasses {
 				var err error
 				if os.Getenv("ENV") != "production" {
-					_, err = db.Exec("INSERT INTO users (email, password) values ($1, $2)", user.Email, user.Password)
+					_, err = db.Exec("INSERT INTO users (email, password) VALUES($1, $2)", user.Email, user.Password)
 				} else {
 					_, err = db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password)
 				}
 				//if _, err := db.Exec("INSERT INTO users (id, email, password) values (?, ?, ?)", nil, user.Email, user.Password); err != nil {
 				if err != nil {
-					page.Error = "tried to insert: " + err.Error()
+					page.Error = "tried to insert: " + err.Error() + " user: " + user.Email + " password: " + string(user.Password)
 				} else {
 					// Put user into session
 					sessions.GetSession(r).Set("User", user.Email)
